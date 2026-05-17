@@ -3,7 +3,7 @@
   mode: single
   then:
     - logger.log: "Disconnected Mode Triggered"
-    - fan.turn_on: 
+    - fan.turn_on:
         id: fan_motor
         speed: !lambda |-
           auto hum = id(air_humidity).state;
