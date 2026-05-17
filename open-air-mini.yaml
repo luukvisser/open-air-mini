@@ -101,14 +101,6 @@ globals:
     type: int
     restore_value: no
     initial_value: "60"
-  # Disconnected Mode Default Fan Speed, for humidities lower than
-  # Disconnected Hum Level Medium Speed or if NOT using a humidity sensor.
-  # Without sensor this speed is maintained until a connection to Home
-  # Assistant has been restored and your automations can take over.
-  - id: disconnected_default_fan_speed
-    type: int
-    restore_value: no
-    initial_value: "25"
   - id: disconnected_hum_level_max_speed
     type: int
     restore_value: no
@@ -117,11 +109,6 @@ globals:
     type: int
     restore_value: no
     initial_value: "55"
-  # Maximum fan RPM, used to convert measured RPM into a percentage.
-  - id: max_fan_rpm
-    type: int
-    restore_value: no
-    initial_value: "3400"
 # From V1.4.0 the sensor pins on the Open AIR Mini are swapped. Correct
 # example is below. For boards <1.4.0 swap the pin pairs.
 uart:
@@ -168,16 +155,18 @@ sensor:
     pin: GPIO14
     unit_of_measurement: 'RPM'
     name: 'AIR Mini RPM'
+    accuracy_decimals: 0
+    device_class: ""
     id: open_air_mini_rpm
   - platform: copy
     source_id: open_air_mini_rpm
-    name: 'rpm_percentage'
+    name: "Fan Speed"
     id: open_air_mini_rpm_percent
     unit_of_measurement: '%'
     accuracy_decimals: 0
     device_class: ""
     filters:
-      - lambda: return min(max(x / id(max_fan_rpm) * 100.0, 0.0), 100.0);
+      - lambda: return min(max(x / id(max_fan_rpm).state * 100.0, 0.0), 100.0);
   - platform: wifi_signal
     name: "WiFi Signal dB"
     id: wifi_signal_db
@@ -192,6 +181,42 @@ sensor:
     unit_of_measurement: "Signal %"
     entity_category: "diagnostic"
     device_class: ""
+# Disconnected Mode Default Fan Speed, for humidities lower than
+# Disconnected Hum Level Medium Speed or if NOT using a humidity sensor.
+# Without sensor this speed is maintained until a connection to Home
+# Assistant has been restored and your automations can take over.
+# Exposed as a number entity so it can be tuned from the ESPHome web
+# server / Home Assistant; the value persists across reboots.
+number:
+  - platform: template
+    id: disconnected_default_fan_speed
+    name: "Disconnected Default Fan Speed"
+    icon: "mdi:fan"
+    min_value: 0
+    max_value: 100
+    step: 1
+    unit_of_measurement: "%"
+    initial_value: 25
+    restore_value: true
+    optimistic: true
+    mode: slider
+    entity_category: config
+  # Maximum fan RPM, used to convert measured RPM into a percentage.
+  # Exposed so it can be calibrated per unit from the ESPHome web server
+  # / Home Assistant; the value persists across reboots.
+  - platform: template
+    id: max_fan_rpm
+    name: "Max Fan RPM"
+    icon: "mdi:speedometer"
+    min_value: 500
+    max_value: 10000
+    step: 50
+    unit_of_measurement: "RPM"
+    initial_value: 3400
+    restore_value: true
+    optimistic: true
+    mode: box
+    entity_category: config
 script: !include disconnected-mode-without-humidity.yaml
 # !include disconnected-mode-with-humidity.yaml
 

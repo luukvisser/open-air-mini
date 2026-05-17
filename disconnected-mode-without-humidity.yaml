@@ -6,4 +6,4 @@
     - fan.turn_on:
         id: fan_motor
         speed: !lambda |-
-          return id(disconnected_default_fan_speed);
+          return id(disconnected_default_fan_speed).state;

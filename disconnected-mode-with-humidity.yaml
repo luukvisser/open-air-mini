@@ -12,6 +12,6 @@
           } else if (hum >= id(disconnected_hum_level_medium_speed)) {
             return id(disconnected_medium_fan_speed);
           } else {
-            return id(disconnected_default_fan_speed);
+            return id(disconnected_default_fan_speed).state;
           }
-          return id(disconnected_default_fan_speed);
+          return id(disconnected_default_fan_speed).state;
