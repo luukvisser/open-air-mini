@@ -251,7 +251,7 @@ number:
     max_value: 10000
     step: 50
     unit_of_measurement: "RPM"
-    initial_value: 3400
+    initial_value: 3000
     restore_value: true
     optimistic: true
     mode: box
