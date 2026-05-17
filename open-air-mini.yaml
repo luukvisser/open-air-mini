@@ -149,6 +149,7 @@ i2c:
     scan: false
     frequency: 400kHz
 status_led:
+  id: status_led_indicator
   pin:
     number: GPIO33
 # PWM output for controlling the motor.
@@ -171,6 +172,7 @@ sensor:
   - platform: copy
     source_id: open_air_mini_rpm
     name: 'rpm_percentage'
+    id: open_air_mini_rpm_percent
     unit_of_measurement: '%'
     accuracy_decimals: 0
     device_class: ""
@@ -184,6 +186,7 @@ sensor:
   - platform: copy
     source_id: wifi_signal_db
     name: "WiFi Signal Percent"
+    id: wifi_signal_percent
     filters:
       - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
     unit_of_measurement: "Signal %"
