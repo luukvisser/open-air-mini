@@ -1,0 +1,19 @@
+# Gitignore settings for ESPHome
+/.esphome/
+/.pioenvs/
+/.piolibdeps/
+*.bin
+
+# Real credentials — copy example.secrets.yaml to secrets.yaml locally.
+/secrets.yaml
+
+# Python / uv
+/.venv/
+__pycache__/
+*.pyc
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

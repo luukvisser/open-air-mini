@@ -1,0 +1,208 @@
+# Open AIR Mini — DIY ventilation controller running ESPHome.
+#
+# This configuration targets the "Made for ESPHome" program:
+#   https://esphome.io/guides/made_for_esphome/
+#
+# Release workflow:
+#   - Bump `substitutions.config_version` and `esphome.project.version` together.
+#   - Tag the commit as `open-air-mini/v<version>` (the slug before /v must
+#     match the filename / devices.yaml slug).
+#   - CI validates, builds, publishes the manifest under /open-air-mini/ on
+#     GitHub Pages, and attaches binaries to a GitHub Release. Fielded
+#     devices poll the manifest every 6h and surface a "Firmware Update"
+#     entity in Home Assistant / the web UI.
+---
+substitutions:
+  config_version: "1.0.0" # keep in sync with esphome.project.version below
+esphome:
+  name: "open-air-mini"
+  friendly_name: "Open AIR Mini"
+  # Allows a single firmware to be flashed to many physical devices —
+  # each gets a unique hostname / entity-id suffix derived from its MAC.
+  name_add_mac_suffix: true
+  # `project.name` must be globally unique and stable: devices key on it
+  # for update checks and Home Assistant adoption. Reverse-domain style
+  # plus the device slug avoids collisions between products.
+  project:
+    name: "luukvisser.open-air-mini"
+    version: "1.0.0"
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+logger:
+api:
+ota:
+  - platform: esphome
+    id: ota_esphome
+  - platform: http_request
+    id: ota_http_request
+http_request:
+  id: http_request_client
+  timeout: 10s
+  buffer_size_rx: 2048
+update:
+  - platform: http_request
+    id: firmware_update
+    name: "Firmware Update"
+    # Per-device manifest URL — must match the Pages path the release
+    # workflow publishes to (site/<slug>/manifest.json).
+    source: "https://luukvisser.github.io/open-air-mini/open-air-mini/manifest.json"
+    update_interval: 6h
+    entity_category: diagnostic
+wifi:
+  id: wifi_client
+  # Fallback hotspot (captive portal) in case wifi connection fails.
+  ap:
+    ssid: "Open AIR Mini"
+    password: "cleanair"
+    ap_timeout: 90s
+captive_portal:
+  id: captive_portal_web
+# Wi-Fi provisioning over BLE and serial — required by Made-for-ESPHome.
+esp32_improv:
+  id: improv_ble
+  authorizer: none
+improv_serial:
+  id: improv_serial_provisioner
+dashboard_import:
+  # The @main ref means users always adopt the latest version of the
+  # config from the default branch; switch to a tag (e.g.
+  # @open-air-mini/v1.0.0) if you want adoption pinned to a release.
+  package_import_url: "github://luukvisser/open-air-mini/open-air-mini.yaml@main"
+  import_full_config: false
+web_server:
+  id: web_server_ui
+  port: 80
+  version: 3
+button:
+  - platform: safe_mode
+    id: safe_mode_button
+    name: "Safe Mode Boot"
+    entity_category: diagnostic
+globals:
+  # Disconnected Mode Max Fan Speed, linked to Disconnected Hum Level Max Speed
+  - id: disconnected_max_fan_speed
+    type: int
+    restore_value: no
+    initial_value: "100"
+  # Disconnected Mode Medium Fan Speed, linked to Disconnected Hum Level Medium Speed
+  - id: disconnected_medium_fan_speed
+    type: int
+    restore_value: no
+    initial_value: "60"
+  # Disconnected Mode Default Fan Speed, for humidities lower than
+  # Disconnected Hum Level Medium Speed or if NOT using a humidity sensor.
+  # Without sensor this speed is maintained until a connection to Home
+  # Assistant has been restored and your automations can take over.
+  - id: disconnected_default_fan_speed
+    type: int
+    restore_value: no
+    initial_value: "25"
+  - id: disconnected_hum_level_max_speed
+    type: int
+    restore_value: no
+    initial_value: "75"
+  - id: disconnected_hum_level_medium_speed
+    type: int
+    restore_value: no
+    initial_value: "55"
+  # Maximum fan RPM, used to convert measured RPM into a percentage.
+  - id: max_fan_rpm
+    type: int
+    restore_value: no
+    initial_value: "3400"
+# From V1.4.0 the sensor pins on the Open AIR Mini are swapped. Correct
+# example is below. For boards <1.4.0 swap the pin pairs.
+uart:
+  # UART for Sensor 2
+  - id: uart_sensor_2
+    rx_pin: GPIO13
+    tx_pin: GPIO12
+    baud_rate: 9600
+  # UART for Sensor 1
+  - id: uart_sensor_1
+    rx_pin: GPIO25
+    tx_pin: GPIO26
+    baud_rate: 9600
+i2c:
+  # I2C for Sensor 2
+  - id: i2c_sensor_2
+    sda: GPIO19
+    scl: GPIO18
+    scan: false
+    frequency: 400kHz
+  # I2C for Sensor 1
+  - id: i2c_sensor_1
+    sda: GPIO16
+    scl: GPIO4
+    scan: false
+    frequency: 400kHz
+
+status_led:
+  pin:
+    number: GPIO33
+
+# PWM output for controlling the motor.
+output:
+  - platform: ledc
+    pin: GPIO15
+    inverted: true
+    id: open_air_mini
+
+fan:
+  - platform: speed
+    output: open_air_mini
+    name: "Open AIR Mini"
+    id: fan_motor
+
+sensor:
+  - platform: pulse_counter
+    pin: GPIO14
+    unit_of_measurement: 'RPM'
+    name: 'AIR Mini RPM'
+    id: open_air_mini_rpm
+
+  - platform: copy
+    source_id: open_air_mini_rpm
+    name: 'rpm_percentage'
+    unit_of_measurement: '%'
+    accuracy_decimals: 0
+    device_class: ""
+    filters:
+      - lambda: return min(max(x / id(max_fan_rpm) * 100.0, 0.0), 100.0);
+
+  - platform: wifi_signal
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "WiFi Signal Percent"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "Signal %"
+    entity_category: "diagnostic"
+    device_class: ""
+
+script:
+  # The two disconnected-mode includes are mutually exclusive — only one at a time.
+  !include disconnected-mode-without-humidity.yaml
+  # !include disconnected-mode-with-humidity.yaml
+
+interval:
+  - interval: 30s
+    then:
+      - logger.log: "API Connectivity Check for Disconnected Mode"
+      - if:
+          condition:
+            not:
+              api.connected:
+          then:
+            - logger.log: "API disconnected"
+            - script.execute: disconnected_mode
+          else:
+            - logger.log: "API connected"
+            - script.stop: disconnected_mode

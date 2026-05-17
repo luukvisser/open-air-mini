@@ -1,0 +1,26 @@
+# Registry of devices built and released from this repository.
+#
+# Each entry describes one flashable firmware. The CI pipeline reads this
+# file to discover which YAMLs to validate on PRs and which one to build
+# when a tag is pushed. Releases are tagged as <slug>/v<semver>, e.g.
+# `open-air-mini/v1.0.0`, so each device versions independently.
+#
+# Fields:
+#   slug          Short kebab-case identifier. Used in tag names, the
+#                 manifest URL path on GitHub Pages, and artifact filenames.
+#                 Must match the YAML filename (without .yaml).
+#   name          Human-readable product name shown in manifests and UIs.
+#   yaml          Path to the ESPHome config, relative to the repo root.
+#   chip_family   ESP Web Tools chip family string. Must match the chip
+#                 actually targeted by the YAML.
+#   node_name     The `esphome.name` the YAML resolves to. Used to locate
+#                 the PlatformIO build output directory.
+#   description   Short one-line description for the Pages landing page.
+---
+devices:
+  - slug: open-air-mini
+    name: "Open AIR Mini"
+    yaml: open-air-mini.yaml
+    chip_family: "ESP32"
+    node_name: open-air-mini
+    description: "DIY ventilation controller — PWM fan with humidity-aware disconnected mode."
