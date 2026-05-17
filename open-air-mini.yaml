@@ -32,6 +32,10 @@ esp32:
     type: arduino
 logger:
 api:
+  # Ventilation must keep running when Home Assistant is unreachable;
+  # disable the API reboot-on-no-client watchdog so a HA outage doesn't
+  # cycle the controller. Disconnected mode handles the fan in the gap.
+  reboot_timeout: 0s
   # Event-driven disconnected-mode handling: react the moment the API
   # client drops or returns, rather than polling on an interval.
   on_client_disconnected:
@@ -90,59 +94,72 @@ button:
     id: safe_mode_button
     name: "Safe Mode Boot"
     entity_category: diagnostic
-globals:
-  # Disconnected Mode Max Fan Speed, linked to Disconnected Hum Level Max Speed
-  - id: disconnected_max_fan_speed
-    type: int
-    restore_value: no
-    initial_value: "100"
-  # Disconnected Mode Medium Fan Speed, linked to Disconnected Hum Level Medium Speed
-  - id: disconnected_medium_fan_speed
-    type: int
-    restore_value: no
-    initial_value: "60"
-  - id: disconnected_hum_level_max_speed
-    type: int
-    restore_value: no
-    initial_value: "75"
-  - id: disconnected_hum_level_medium_speed
-    type: int
-    restore_value: no
-    initial_value: "55"
-# From V1.4.0 the sensor pins on the Open AIR Mini are swapped. Correct
-# example is below. For boards <1.4.0 swap the pin pairs.
-uart:
-  # UART for Sensor 2
-  - id: uart_sensor_2
-    rx_pin: GPIO13
-    tx_pin: GPIO12
-    baud_rate: 9600
-  # UART for Sensor 1
-  - id: uart_sensor_1
-    rx_pin: GPIO25
-    tx_pin: GPIO26
-    baud_rate: 9600
-i2c:
-  # I2C for Sensor 2
-  - id: i2c_sensor_2
-    sda: GPIO19
-    scl: GPIO18
-    scan: false
-    frequency: 400kHz
-  # I2C for Sensor 1
-  - id: i2c_sensor_1
-    sda: GPIO16
-    scl: GPIO4
-    scan: false
-    frequency: 400kHz
+  - platform: restart
+    id: restart_button
+    name: "Restart"
+    entity_category: diagnostic
+  - platform: factory_reset
+    id: factory_reset_button
+    name: "Factory Reset"
+    entity_category: diagnostic
+# Globals below are only consumed by disconnected-mode-with-humidity.yaml.
+# Uncomment them together with the corresponding `!include` at the bottom.
+# globals:
+#   - id: disconnected_max_fan_speed
+#     type: int
+#     restore_value: no
+#     initial_value: "100"
+#   - id: disconnected_medium_fan_speed
+#     type: int
+#     restore_value: no
+#     initial_value: "60"
+#   - id: disconnected_hum_level_max_speed
+#     type: int
+#     restore_value: no
+#     initial_value: "75"
+#   - id: disconnected_hum_level_medium_speed
+#     type: int
+#     restore_value: no
+#     initial_value: "55"
+# Sensor bus pin assignments for the Open AIR Mini board.
+# Uncomment the bus(es) you need when wiring an I²C or UART add-on sensor
+# (humidity, CO₂, etc.). From V1.4.0 the sensor pins are swapped; the
+# mapping below is correct for v1.4.0+. For boards <1.4.0 swap the pin
+# pairs (Sensor 1 ↔ Sensor 2).
+# uart:
+#   - id: uart_sensor_2
+#     rx_pin: GPIO13
+#     tx_pin: GPIO12
+#     baud_rate: 9600
+#   - id: uart_sensor_1
+#     rx_pin: GPIO25
+#     tx_pin: GPIO26
+#     baud_rate: 9600
+# i2c:
+#   - id: i2c_sensor_2
+#     sda: GPIO19
+#     scl: GPIO18
+#     scan: false
+#     frequency: 400kHz
+#   - id: i2c_sensor_1
+#     sda: GPIO16
+#     scl: GPIO4
+#     scan: false
+#     frequency: 400kHz
 status_led:
   id: status_led_indicator
   pin:
     number: GPIO33
-# PWM output for controlling the motor.
+# PWM control signal to the EBM-Papst R3G190-RC05-20 EC fan.
+# - frequency: 1 kHz per the EBM-Papst RC05 PWM input spec (~1 kHz
+#   typical; ultrasonic frequencies are out of range for this input).
+# - inverted: true: the fan's PWM input is fail-safe — signal low /
+#   loss-of-signal commands maximum speed, so we invert so HA's 100%
+#   maps to full speed.
 output:
   - platform: ledc
     pin: GPIO15
+    frequency: 1000Hz
     inverted: true
     id: open_air_mini
 fan:
@@ -150,6 +167,13 @@ fan:
     output: open_air_mini
     name: "Open AIR Mini"
     id: fan_motor
+    # Below ~10% duty the EC fan sits in its internal deadband; clamp
+    # the controller-side floor and treat 0 as a true stop.
+    min_power: 0.1
+    zero_means_zero: true
+    # Ventilation should resume after a power blip even if HA is slow
+    # to push the prior state back.
+    restore_mode: RESTORE_DEFAULT_ON
 sensor:
   - platform: pulse_counter
     pin: GPIO14
@@ -168,6 +192,16 @@ sensor:
     device_class: ""
     filters:
       - lambda: return min(max(x / id(max_fan_rpm).state * 100.0, 0.0), 100.0);
+  - platform: uptime
+    name: "Uptime"
+    id: device_uptime
+    update_interval: 60s
+    entity_category: "diagnostic"
+  - platform: internal_temperature
+    name: "ESP32 Internal Temperature"
+    id: esp32_internal_temperature
+    update_interval: 60s
+    entity_category: "diagnostic"
   - platform: wifi_signal
     name: "WiFi Signal dB"
     id: wifi_signal_db
