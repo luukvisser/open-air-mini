@@ -32,6 +32,16 @@ esp32:
     type: arduino
 logger:
 api:
+  # Event-driven disconnected-mode handling: react the moment the API
+  # client drops or returns, rather than polling on an interval.
+  on_client_disconnected:
+    then:
+      - logger.log: "API disconnected — entering disconnected mode"
+      - script.execute: disconnected_mode
+  on_client_connected:
+    then:
+      - logger.log: "API connected — leaving disconnected mode"
+      - script.stop: disconnected_mode
 ota:
   - platform: esphome
     id: ota_esphome
@@ -183,17 +193,3 @@ script: !include disconnected-mode-without-humidity.yaml
 # !include disconnected-mode-with-humidity.yaml
 
 # The two disconnected-mode includes are mutually exclusive — only one at a time.
-interval:
-  - interval: 30s
-    then:
-      - logger.log: "API Connectivity Check for Disconnected Mode"
-      - if:
-          condition:
-            not:
-              api.connected:
-          then:
-            - logger.log: "API disconnected"
-            - script.execute: disconnected_mode
-          else:
-            - logger.log: "API connected"
-            - script.stop: disconnected_mode
