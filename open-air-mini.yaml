@@ -161,16 +161,17 @@ output:
     pin: GPIO15
     frequency: 1000Hz
     inverted: true
+    # Below 12% duty the EC fan sits in its internal deadband; clamp
+    # the controller-side floor and treat 0 as a true stop.
+    min_power: 0.12 
+    zero_means_zero: true    
     id: open_air_mini
 fan:
   - platform: speed
     output: open_air_mini
     name: "Open AIR Mini"
     id: fan_motor
-    # Below ~10% duty the EC fan sits in its internal deadband; clamp
-    # the controller-side floor and treat 0 as a true stop.
-    min_power: 0.1
-    zero_means_zero: true
+
     # Ventilation should resume after a power blip even if HA is slow
     # to push the prior state back.
     restore_mode: RESTORE_DEFAULT_ON
@@ -191,7 +192,10 @@ sensor:
     accuracy_decimals: 0
     device_class: ""
     filters:
-      - lambda: return min(max(x / id(max_fan_rpm).state * 100.0, 0.0), 100.0);
+      - lambda: return x / id(max_fan_rpm).state * 100.0;
+      - clamp:
+          min_value: 0
+          max_value: 100
   - platform: uptime
     name: "Uptime"
     id: device_uptime
