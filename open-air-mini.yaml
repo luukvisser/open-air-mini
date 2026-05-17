@@ -158,6 +158,7 @@ sensor:
     accuracy_decimals: 0
     device_class: ""
     id: open_air_mini_rpm
+    update_interval: 5s
   - platform: copy
     source_id: open_air_mini_rpm
     name: "Fan Speed"
