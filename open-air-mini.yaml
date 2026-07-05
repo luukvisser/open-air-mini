@@ -141,25 +141,25 @@ globals:
     type: bool
     restore_value: no
     initial_value: "false"
-  # The globals below are only consumed by disconnected-mode-with-humidity.yaml.
-  # Uncomment them (as items of this same block) together with the
-  # corresponding `!include` at the bottom.
-  # - id: disconnected_max_fan_speed
-  #   type: int
-  #   restore_value: no
-  #   initial_value: "100"
-  # - id: disconnected_medium_fan_speed
-  #   type: int
-  #   restore_value: no
-  #   initial_value: "60"
-  # - id: disconnected_hum_level_max_speed
-  #   type: int
-  #   restore_value: no
-  #   initial_value: "75"
-  # - id: disconnected_hum_level_medium_speed
-  #   type: int
-  #   restore_value: no
-  #   initial_value: "55"
+# The globals below are only consumed by disconnected-mode-with-humidity.yaml.
+# Uncomment them (as items of the globals block above) together with the
+# corresponding `!include` at the bottom.
+#   - id: disconnected_max_fan_speed
+#     type: int
+#     restore_value: no
+#     initial_value: "100"
+#   - id: disconnected_medium_fan_speed
+#     type: int
+#     restore_value: no
+#     initial_value: "60"
+#   - id: disconnected_hum_level_max_speed
+#     type: int
+#     restore_value: no
+#     initial_value: "75"
+#   - id: disconnected_hum_level_medium_speed
+#     type: int
+#     restore_value: no
+#     initial_value: "55"
 # Sensor bus pin assignments for the Open AIR Mini board.
 # Uncomment the bus(es) you need when wiring an I²C or UART add-on sensor
 # (humidity, CO₂, etc.). From V1.4.0 the sensor pins are swapped; the
@@ -202,15 +202,14 @@ output:
     inverted: true
     # Below 12% duty the EC fan sits in its internal deadband; clamp
     # the controller-side floor and treat 0 as a true stop.
-    min_power: 0.12 
-    zero_means_zero: true    
+    min_power: 0.12
+    zero_means_zero: true
     id: open_air_mini
 fan:
   - platform: speed
     output: open_air_mini
     name: "Open AIR Mini"
     id: fan_motor
-
     # Ventilation should resume after a power blip even if HA is slow
     # to push the prior state back.
     restore_mode: RESTORE_DEFAULT_ON
