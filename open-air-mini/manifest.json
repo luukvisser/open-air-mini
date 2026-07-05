@@ -14,7 +14,7 @@
       ],
       "ota": {
         "path": "firmware/latest/open-air-mini.ota.bin",
-        "md5": "41f8d1e675e862f54d1b68ce8b82cc99",
+        "md5": "79cf19f4f4c23289e02a7b62c0d8c13d",
         "release_url": "https://github.com/luukvisser/open-air-mini/releases/tag/open-air-mini%2Fv1.1.0",
         "summary": "Open AIR Mini firmware v1.1.0"
       }
