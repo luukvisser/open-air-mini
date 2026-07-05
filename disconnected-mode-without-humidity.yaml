@@ -1,9 +1,21 @@
 ---
-- id: disconnected_mode
-  mode: single
-  then:
-    - logger.log: "Disconnected Mode Triggered"
-    - fan.turn_on:
-        id: fan_motor
-        speed: !lambda |-
-          return id(disconnected_default_fan_speed).state;
+# Single script definition, included as one item of the top-level `script:`
+# list in open-air-mini.yaml (`- !include ...`).
+id: disconnected_mode
+mode: single
+then:
+  # A calibration run owns the fan while it's active. If disconnected mode
+  # triggers mid-calibration, defer it — the calibration script applies it
+  # once it finishes restoring, so we don't fight over the fan.
+  - if:
+      condition:
+        lambda: "return id(calibrating);"
+      then:
+        - logger.log: "Disconnected Mode deferred — calibration in progress"
+        - lambda: "id(disconnected_pending) = true;"
+      else:
+        - logger.log: "Disconnected Mode Triggered"
+        - fan.turn_on:
+            id: fan_motor
+            speed: !lambda |-
+              return id(disconnected_default_fan_speed).state;

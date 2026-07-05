@@ -13,7 +13,7 @@
 #     entity in Home Assistant / the web UI.
 ---
 substitutions:
-  config_version: "1.0.0" # keep in sync with esphome.project.version below
+  config_version: "1.1.0" # keep in sync with esphome.project.version below
 esphome:
   name: "open-air-mini"
   friendly_name: "Open AIR Mini"
@@ -25,7 +25,7 @@ esphome:
   # plus the device slug avoids collisions between products.
   project:
     name: "luukvisser.open-air-mini"
-    version: "1.0.0"
+    version: "1.1.0"
 esp32:
   board: esp32dev
   framework:
@@ -102,25 +102,64 @@ button:
     id: factory_reset_button
     name: "Factory Reset"
     entity_category: diagnostic
-# Globals below are only consumed by disconnected-mode-with-humidity.yaml.
-# Uncomment them together with the corresponding `!include` at the bottom.
-# globals:
-#   - id: disconnected_max_fan_speed
-#     type: int
-#     restore_value: no
-#     initial_value: "100"
-#   - id: disconnected_medium_fan_speed
-#     type: int
-#     restore_value: no
-#     initial_value: "60"
-#   - id: disconnected_hum_level_max_speed
-#     type: int
-#     restore_value: no
-#     initial_value: "75"
-#   - id: disconnected_hum_level_medium_speed
-#     type: int
-#     restore_value: no
-#     initial_value: "55"
+  # Runs the fan flat-out for a minute and stores the peak RPM as the new
+  # Max Fan RPM, then restores the fan to its previous state. See
+  # calibrate-max-rpm.yaml.
+  - platform: template
+    id: calibrate_max_rpm_button
+    name: "Calibrate Max Fan RPM"
+    icon: "mdi:tune"
+    entity_category: config
+    on_press:
+      - script.execute: calibrate_max_rpm
+# Calibration bookkeeping — consumed by the "Calibrate Max Fan RPM" button
+# (calibrate-max-rpm.yaml) and the RPM sensor's on_value handler. None of
+# these persist across reboots; they only live for the duration of a run.
+globals:
+  # True while a calibration run is in progress; gates the RPM max tracking.
+  - id: calibrating
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  # Highest RPM seen so far during the current calibration run.
+  - id: calibration_max_rpm
+    type: float
+    restore_value: no
+    initial_value: "0.0"
+  # Fan state captured at the start of a run, restored when it finishes.
+  - id: pre_calibration_state
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: pre_calibration_speed
+    type: int
+    restore_value: no
+    initial_value: "0"
+  # Set if disconnected mode wanted to take over while a calibration run was
+  # active; the run applies disconnected mode instead of restoring when done.
+  - id: disconnected_pending
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  # The globals below are only consumed by disconnected-mode-with-humidity.yaml.
+  # Uncomment them (as items of this same block) together with the
+  # corresponding `!include` at the bottom.
+  # - id: disconnected_max_fan_speed
+  #   type: int
+  #   restore_value: no
+  #   initial_value: "100"
+  # - id: disconnected_medium_fan_speed
+  #   type: int
+  #   restore_value: no
+  #   initial_value: "60"
+  # - id: disconnected_hum_level_max_speed
+  #   type: int
+  #   restore_value: no
+  #   initial_value: "75"
+  # - id: disconnected_hum_level_medium_speed
+  #   type: int
+  #   restore_value: no
+  #   initial_value: "55"
 # Sensor bus pin assignments for the Open AIR Mini board.
 # Uncomment the bus(es) you need when wiring an I²C or UART add-on sensor
 # (humidity, CO₂, etc.). From V1.4.0 the sensor pins are swapped; the
@@ -184,6 +223,14 @@ sensor:
     device_class: ""
     id: open_air_mini_rpm
     update_interval: 5s
+    # While a calibration run is active, keep the highest RPM sample seen.
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: "return id(calibrating);"
+            then:
+              - lambda: "if (x > id(calibration_max_rpm)) id(calibration_max_rpm) = x;"
   - platform: copy
     source_id: open_air_mini_rpm
     name: "Fan Speed"
@@ -249,14 +296,16 @@ number:
     icon: "mdi:speedometer"
     min_value: 500
     max_value: 10000
-    step: 50
+    step: 1
     unit_of_measurement: "RPM"
     initial_value: 3000
     restore_value: true
     optimistic: true
     mode: box
     entity_category: config
-script: !include disconnected-mode-without-humidity.yaml
-# !include disconnected-mode-with-humidity.yaml
+script:
+  - !include calibrate-max-rpm.yaml
+  - !include disconnected-mode-without-humidity.yaml
+  # - !include disconnected-mode-with-humidity.yaml
 
 # The two disconnected-mode includes are mutually exclusive — only one at a time.

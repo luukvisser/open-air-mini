@@ -1,0 +1,60 @@
+---
+# Self-calibration for Max Fan RPM.
+#
+# Triggered by the "Calibrate Max Fan RPM" button. Runs the fan at 100% for
+# one minute, records the highest RPM seen (tracked live by the pulse-counter
+# sensor's on_value while `calibrating` is true), stores it in the Max Fan RPM
+# number, then restores the fan to whatever state it was in beforehand.
+#
+# Included as one item of the top-level `script:` list in open-air-mini.yaml.
+id: calibrate_max_rpm
+mode: single # ignore repeated presses while a run is already in progress
+then:
+  - logger.log: "Calibration started — running fan at full speed for 60s"
+  # Remember the current fan state so we can restore it afterwards, reset the
+  # running max, and start tracking RPM samples.
+  - lambda: |-
+      id(pre_calibration_state) = id(fan_motor).state;
+      id(pre_calibration_speed) = id(fan_motor).speed;
+      id(calibration_max_rpm) = 0.0;
+      id(disconnected_pending) = false;
+      id(calibrating) = true;
+  - fan.turn_on:
+      id: fan_motor
+      speed: 100
+  - delay: 60s
+  - lambda: "id(calibrating) = false;"
+  # Only commit a result if the fan actually spun up and we measured RPM;
+  # otherwise leave the existing Max Fan RPM untouched.
+  - if:
+      condition:
+        lambda: "return id(calibration_max_rpm) > 0;"
+      then:
+        - number.set:
+            id: max_fan_rpm
+            value: !lambda "return id(calibration_max_rpm);"
+        - logger.log:
+            format: "Calibration complete — Max Fan RPM set to %.0f"
+            args: ["id(calibration_max_rpm)"]
+      else:
+        - logger.log: "Calibration aborted — no RPM measured, Max Fan RPM unchanged"
+  # If Home Assistant dropped while we were calibrating, hand the fan to
+  # disconnected mode instead of restoring; otherwise restore the fan to
+  # whatever state it was in before calibration.
+  - if:
+      condition:
+        lambda: "return id(disconnected_pending);"
+      then:
+        - logger.log: "Calibration done while disconnected — applying disconnected mode"
+        - script.execute: disconnected_mode
+      else:
+        - if:
+            condition:
+              lambda: "return id(pre_calibration_state);"
+            then:
+              - fan.turn_on:
+                  id: fan_motor
+                  speed: !lambda "return id(pre_calibration_speed);"
+            else:
+              - fan.turn_off:
+                  id: fan_motor
