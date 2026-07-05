@@ -1,6 +1,6 @@
 {
   "name": "Open AIR Mini",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "home_assistant_domain": "esphome",
   "new_install_prompt_erase": false,
   "builds": [
@@ -14,9 +14,9 @@
       ],
       "ota": {
         "path": "firmware/latest/open-air-mini.ota.bin",
-        "md5": "79cf19f4f4c23289e02a7b62c0d8c13d",
-        "release_url": "https://github.com/luukvisser/open-air-mini/releases/tag/open-air-mini%2Fv1.1.0",
-        "summary": "Open AIR Mini firmware v1.1.0"
+        "md5": "7c69dad73a5e1aa016564bb4c6411aa5",
+        "release_url": "https://github.com/luukvisser/open-air-mini/releases/tag/open-air-mini%2Fv1.2.0",
+        "summary": "Open AIR Mini firmware v1.2.0"
       }
     }
   ]
