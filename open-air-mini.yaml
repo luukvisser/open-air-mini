@@ -13,7 +13,7 @@
 #     entity in Home Assistant / the web UI.
 ---
 substitutions:
-  config_version: "1.1.0" # keep in sync with esphome.project.version below
+  config_version: "1.2.0" # keep in sync with esphome.project.version below
 esphome:
   name: "open-air-mini"
   friendly_name: "Open AIR Mini"
@@ -25,7 +25,7 @@ esphome:
   # plus the device slug avoids collisions between products.
   project:
     name: "luukvisser.open-air-mini"
-    version: "1.1.0"
+    version: "1.2.0"
 esp32:
   board: esp32dev
   framework:
@@ -112,6 +112,16 @@ button:
     entity_category: config
     on_press:
       - script.execute: calibrate_max_rpm
+  # Forces an immediate poll of the firmware manifest instead of waiting for
+  # the update component's 6h update_interval; the Firmware Update entity
+  # reflects whatever the check finds.
+  - platform: template
+    id: firmware_update_check_button
+    name: "Firmware Update Check"
+    icon: "mdi:cloud-search"
+    entity_category: diagnostic
+    on_press:
+      - component.update: firmware_update
 # Calibration bookkeeping — consumed by the "Calibrate Max Fan RPM" button
 # (calibrate-max-rpm.yaml) and the RPM sensor's on_value handler. None of
 # these persist across reboots; they only live for the duration of a run.
