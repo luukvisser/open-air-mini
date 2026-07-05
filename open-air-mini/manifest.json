@@ -1,0 +1,23 @@
+{
+  "name": "Open AIR Mini",
+  "version": "1.1.0",
+  "home_assistant_domain": "esphome",
+  "new_install_prompt_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        {
+          "path": "firmware/latest/open-air-mini.factory.bin",
+          "offset": 0
+        }
+      ],
+      "ota": {
+        "path": "firmware/latest/open-air-mini.ota.bin",
+        "md5": "41f8d1e675e862f54d1b68ce8b82cc99",
+        "release_url": "https://github.com/luukvisser/open-air-mini/releases/tag/open-air-mini%2Fv1.1.0",
+        "summary": "Open AIR Mini firmware v1.1.0"
+      }
+    }
+  ]
+}
