@@ -10,7 +10,7 @@ requires-python = ">=3.11,<3.15"
 # deliberately after verifying a new release compiles every device in
 # devices.yaml.
 dependencies = [
-    "esphome==2026.6.4",
+    "esphome==2026.6.5",
     # Used by scripts/ to parse devices.yaml and build the landing page.
     "pyyaml==6.0.3",
 ]
